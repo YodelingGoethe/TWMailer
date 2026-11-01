@@ -107,11 +107,11 @@ static void serve_client(const int fd) {
     LineReader in(fd);
     std::string cmd;
     while (in.readLine(cmd)) {
-        bool ok = true;
-        if (cmd == "SEND") { std::cout << "SEND" << std::endl; ok = handleSend(in, fd); }
-        else if (cmd == "LIST") { std::cout << "LIST" << std::endl; }
-        else if (cmd == "READ") { std::cout << "READ" << std::endl; }
-        else if (cmd == "DEL") { std::cout << "DEL" << std::endl; }
+        bool ok;
+        if (cmd == "SEND") ok = handleSend(in, fd);
+        else if (cmd == "LIST") ok = handleList(in, fd);
+        else if (cmd == "READ") ok = handleRead(in, fd);
+        else if (cmd == "DEL") ok = handleDel(in, fd);
         else if (cmd == "QUIT") { std::cout << "QUIT" << std::endl; return; }
         else { std::cerr << "Unknown command: " << cmd << std::endl; ok = sendAll(fd, "ERR\n"); }
         if (!ok) { std::cerr << "Failed to send" << std::endl; return; }
