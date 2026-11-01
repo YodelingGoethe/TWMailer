@@ -31,6 +31,16 @@ static std::vector<std::filesystem::path> get_messages(const std::string &userna
     return sorted_messages;
 }
 
+static bool find_message(const std::string &username, const std::string &number, std::filesystem::path &out) {
+    if (!validate_username(username) || number.empty() || !std::all_of(number.begin(), number.end(), ::isdigit))
+        return false;
+    const auto messages = get_messages(username);
+    const size_t n = stoul(number);
+    if (n < 1 || n > messages.size()) return false;
+    out = messages[n-1]; // n - 1, since the message numbers are 1-based
+    return true;
+}
+
 static bool handleSend(LineReader &in, const int fd) {
     std::string sender, receiver, subject, line, body;
     if (!in.readLine(sender) || in.readLine(receiver) || in.readLine(subject)) return false;
@@ -56,15 +66,52 @@ static bool handleSend(LineReader &in, const int fd) {
     return sendAll(fd, "OK\n");
 }
 
+static bool handleList(LineReader &in, const int fd) {
+    std::string username;
+    if (!in.readLine(username)) return false;
+    if (!validate_username(username)) return sendAll(fd, "0\n");
+    std::ostringstream out;
+    auto messages = get_messages(username);
+    out << messages.size() << "\n";
+    for (const auto &message: messages) {
+        std::ifstream file(message);
+        std::string sender, receiver, subject;
+        std::getline(file, sender);
+        std::getline(file, receiver);
+        std::getline(file, subject);
+        out << subject << "\n";
+    }
+    return sendAll(fd, out.str());
+}
+
+static bool handleRead(LineReader &in, const int fd) {
+    std::string username, message_number;
+    if (!in.readLine(username) || !in.readLine(message_number)) return false;
+    std::filesystem::path path;
+    if (!find_message(username, message_number, path)) return sendAll(fd, "ERR\n");
+    std::ifstream file(path);
+    std::stringstream ss;
+    ss << file.rdbuf();
+    return sendAll(fd, "OK\n" + ss.str() + ".\n");
+}
+
+static bool handleDel(LineReader &in, const int fd) {
+    std::string username, message_number;
+    if (!in.readLine(username) || !in.readLine(message_number)) return false;
+    if (std::filesystem::path path; !find_message(username, message_number, path) || std::filesystem::remove(path))
+        return sendAll(fd, "ERR\n");
+    return sendAll(fd, "OK\n");
+}
+
 static void serve_client(const int fd) {
     LineReader in(fd);
     std::string cmd;
     while (in.readLine(cmd)) {
-        bool ok = true;
-        if (cmd == "SEND") { std::cout << "SEND" << std::endl; ok = handleSend(in, fd); }
-        else if (cmd == "LIST") { std::cout << "LIST" << std::endl; }
-        else if (cmd == "READ") { std::cout << "READ" << std::endl; }
-        else if (cmd == "DEL") { std::cout << "DEL" << std::endl; }
+        bool ok;
+        if (cmd == "SEND") ok = handleSend(in, fd);
+        else if (cmd == "LIST") ok = handleList(in, fd);
+        else if (cmd == "READ") ok = handleRead(in, fd);
+        else if (cmd == "DEL") ok = handleDel(in, fd);
         else if (cmd == "QUIT") { std::cout << "QUIT" << std::endl; return; }
         else { std::cerr << "Unknown command: " << cmd << std::endl; ok = sendAll(fd, "ERR\n"); }
         if (!ok) { std::cerr << "Failed to send" << std::endl; return; }
