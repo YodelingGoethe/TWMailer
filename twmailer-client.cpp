@@ -1,12 +1,14 @@
 #include <iostream>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "common.h"
 
 #define  speak std::cout<<
 #define error std::cerr <<
 #define clear <<std::flush
+#define blue "\033[1;34m"
 #define green "\033[1;32m"
 #define red "\033[1;31m"
 #define resetc  "\033[0m"
@@ -23,11 +25,11 @@ static void printmessages(LineReader &in)
 {
     std::string line;
     in.readLine(line);
-    speak green << "Sender: " << resetc << line << "\n";
+    speak blue << "Sender: " << resetc << line << "\n";
     in.readLine(line);
-    speak green << "Reciever: " << resetc << line << "\n";
+    speak blue << "Reciever: " << resetc << line << "\n";
     in.readLine(line);
-    speak green << "Subject: " << resetc << line << "\n";
+    speak blue << "Subject: " << resetc << line << "\n";
     //this works because i know exactly what the first three lines of the server answer are going to be.
     while (in.readLine(line) && line != ".")
     {
@@ -39,7 +41,7 @@ int main(int argc, char* argv[])
 {
     if (argc != 3)
     {
-        speak "This ain't how it works... Usage: " << argv[0] << " <ip> <port>\n";
+        speak red "This ain't how it works... Usage: " << argv[0] << " <ip> <port>\n" resetc;
         //argv[0] is always the program name, so this way we can change it later without rewrites.
         return 1;
     }
@@ -54,7 +56,7 @@ int main(int argc, char* argv[])
     //inet_pton from arpa/inet.h parses the ip adress (xxx.xxx.xxx.xxx) with the dots
     //into the ip field in the sockaddr_in struct
     {
-        error "invalid ip or port. check your inputs and try again.\n";
+        error red "invalid ip or port. check your inputs and try again.\n" resetc;
         return 1;
     }
     int fd = socket(AF_INET, SOCK_STREAM, 0); //SOCK_STREAM is TCP, protocol 0 means take the default
@@ -70,7 +72,7 @@ int main(int argc, char* argv[])
         return 1;
     }
     LineReader in(fd); //this reads the server replies from the socket.
-    speak "Connected successfully.\n";
+    speak green "Connected successfully.\n" resetc;
     speak "Possible Commands: SEND, LIST, READ, DEL, QUIT (q)\n";
 
     std::string cmd;
@@ -100,10 +102,10 @@ int main(int argc, char* argv[])
             if (!sendAll(fd, msg) || !in.readLine(line))
             //this sends the whole request and reads the server's reply. if it fails the connection failed.
             {
-                error "Something went wrong, check connection to server.\n";
+                error red "Something went wrong, check connection to server.\n" resetc;
                 break;
             }
-            speak "Message sent." << "\n";
+            speak green "Message sent." << "\n" resetc;
 
         }else if (cmd =="LIST")
         {
@@ -145,24 +147,27 @@ int main(int argc, char* argv[])
             }
             if (!sendAll(fd, "DEL\n" + field1 + "\n" + field2 + "\n")|| !in.readLine(line))
             {
-                error "Something went wrong, check connection to server.\n";
+                error red "Something went wrong, check connection to server.\n" resetc;
                 break;
             }
             if (line=="OK")
             {
-                speak "Message with id " << red << field2 << resetc << " was deleted.\n";
+                speak green "Message with id " red << field2 << green " was deleted.\n" resetc;
+            }else
+            {
+                speak red "This message does not exist!\n" resetc;
             }
         }else if (cmd == "QUIT" || cmd == "q")
         {
-            //do quitting stuff
+            sendAll(fd, "QUIT\n");
+            break;
         }else
         {
-            speak "Something went wrong. Maybe your command does not exist?\n";
+            speak red "Something went wrong. Maybe your command does not exist? Try again.\n" resetc;
         }
-
-
     }
-
+    close(fd);
+    return 0;
 
 
 }
