@@ -95,6 +95,14 @@ static bool handleRead(LineReader &in, const int fd) {
     return sendAll(fd, "OK\n" + ss.str() + ".\n");
 }
 
+static bool handleDel(LineReader &in, const int fd) {
+    std::string username, message_number;
+    if (!in.readLine(username) || !in.readLine(message_number)) return false;
+    if (std::filesystem::path path; !find_message(username, message_number, path) || std::filesystem::remove(path))
+        return sendAll(fd, "ERR\n");
+    return sendAll(fd, "OK\n");
+}
+
 static void serve_client(const int fd) {
     LineReader in(fd);
     std::string cmd;
