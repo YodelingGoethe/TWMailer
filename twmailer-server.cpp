@@ -56,6 +56,24 @@ static bool handleSend(LineReader &in, const int fd) {
     return sendAll(fd, "OK\n");
 }
 
+static bool handleList(LineReader &in, const int fd) {
+    std::string username;
+    if (!in.readLine(username)) return false;
+    if (!validate_username(username)) return sendAll(fd, "0\n");
+    std::ostringstream out;
+    auto messages = get_messages(username);
+    out << messages.size() << "\n";
+    for (const auto &message: messages) {
+        std::ifstream file(message);
+        std::string sender, receiver, subject;
+        std::getline(file, sender);
+        std::getline(file, receiver);
+        std::getline(file, subject);
+        out << subject << "\n";
+    }
+    return sendAll(fd, out.str());
+}
+
 static void serve_client(const int fd) {
     LineReader in(fd);
     std::string cmd;
