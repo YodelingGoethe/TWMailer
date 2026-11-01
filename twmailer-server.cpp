@@ -43,7 +43,7 @@ static bool find_message(const std::string &username, const std::string &number,
 
 static bool handleSend(LineReader &in, const int fd) {
     std::string sender, receiver, subject, line, body;
-    if (!in.readLine(sender) || in.readLine(receiver) || in.readLine(subject)) return false;
+    if (!in.readLine(sender) || !in.readLine(receiver) || !in.readLine(subject)) return false;
     while (true) {
         if (!in.readLine(line)) return false;
         if (line == ".") break;
