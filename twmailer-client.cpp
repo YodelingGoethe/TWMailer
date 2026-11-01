@@ -139,7 +139,19 @@ int main(int argc, char* argv[])
             }
         }else if (cmd =="DEL")
         {
-            //do deleting stuff
+            if (!askinput("Username: ", field1)|| !askinput("Message id: ", field2))
+            {
+                break;
+            }
+            if (!sendAll(fd, "DEL\n" + field1 + "\n" + field2 + "\n")|| !in.readLine(line))
+            {
+                error "Something went wrong, check connection to server.\n";
+                break;
+            }
+            if (line=="OK")
+            {
+                speak "Message with id " << red << field2 << resetc << " was deleted.\n";
+            }
         }else if (cmd == "QUIT" || cmd == "q")
         {
             //do quitting stuff
