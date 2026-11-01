@@ -7,6 +7,13 @@
 #define  speak std::cout<<
 #define end <<std::endl
 #define error std::cerr <<
+#define clear <<std::flush
+
+bool askinput(char* promt, std::string &out)
+{
+    speak promt clear;
+    return static_cast<bool>(std::getline(std::cin, out)); //read stuff is written directly into out, return is true if the function read a line.
+}
 
 int main(int argc, char* argv[])
 {
@@ -73,7 +80,7 @@ int main(int argc, char* argv[])
         {
             speak "Something went wrong. Maybe your command does not exist?" end;
         }
-        //TODO: implement askinput function, fill the massive if else if thing.
+        //TODO: fill the massive if else if thing.
 
     }
 
