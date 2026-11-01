@@ -31,6 +31,16 @@ static std::vector<std::filesystem::path> get_messages(const std::string &userna
     return sorted_messages;
 }
 
+static bool find_message(const std::string &username, const std::string &number, std::filesystem::path &out) {
+    if (!validate_username(username) || number.empty() || !std::all_of(number.begin(), number.end(), ::isdigit))
+        return false;
+    const auto messages = get_messages(username);
+    const size_t n = stoul(number);
+    if (n < 1 || n > messages.size()) return false;
+    out = messages[n-1]; // n - 1, since the message numbers are 1-based
+    return true;
+}
+
 static bool handleSend(LineReader &in, const int fd) {
     std::string sender, receiver, subject, line, body;
     if (!in.readLine(sender) || in.readLine(receiver) || in.readLine(subject)) return false;
@@ -72,6 +82,17 @@ static bool handleList(LineReader &in, const int fd) {
         out << subject << "\n";
     }
     return sendAll(fd, out.str());
+}
+
+static bool handleRead(LineReader &in, const int fd) {
+    std::string username, message_number;
+    if (!in.readLine(username) || !in.readLine(message_number)) return false;
+    std::filesystem::path path;
+    if (!find_message(username, message_number, path)) return sendAll(fd, "ERR\n");
+    std::ifstream file(path);
+    std::stringstream ss;
+    ss << file.rdbuf();
+    return sendAll(fd, "OK\n" + ss.str() + ".\n");
 }
 
 static void serve_client(const int fd) {
