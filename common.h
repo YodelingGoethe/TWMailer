@@ -1,20 +1,16 @@
-//
-// Created by Anwender on 01.11.2026.
-//
 #pragma once
 
 #include <string>
 #include <sys/socket.h>
 #include <sys/types.h>
 
-
 class LineReader {
 private:
     int _fd; //copy of the socket file descriptor
-    char _buf[1024];
+    char _buf[1024]{};
     size_t _pos = 0, _len = 0;
 public:
-    explicit LineReader(int fd) : _fd(fd) {}
+    explicit LineReader(const int fd) : _fd(fd) {}
     bool readLine(std::string &line)
     {
         line.clear();
@@ -22,7 +18,7 @@ public:
         {
             if (_pos == _len) //if the buffer is fully comsumed...
             {
-                ssize_t n = recv(_fd, _buf, sizeof(_buf), 0); //ssize_t == signed, size_t is unsigned.
+                const ssize_t n = recv(_fd, _buf, sizeof(_buf), 0); //ssize_t == signed, size_t is unsigned.
                 if (n<=0) //n<0 means error, 0 means peer closed the connection.
                 {
                     return false;
@@ -30,7 +26,7 @@ public:
                 _pos=0;
                 _len=static_cast<size_t>(n); //this cast works bc of the n<=0 check earlier
             }
-            char c = _buf[_pos++];
+            const char c = _buf[_pos++];
             if (c=='\n')
             {
                 return true;
@@ -42,3 +38,14 @@ public:
         }
     }
 };
+
+// send() may write only part of the data, so this helper loops until everything is written
+inline bool sendAll(const int fd, const std::string &line) {
+    size_t sent = 0;
+    while (sent < line.size()) {
+        const ssize_t n = send(fd, line.data() + sent, line.size() - sent, 0);
+        if (n <= 0) return false;
+        sent += static_cast<size_t>(n);
+    }
+    return true;
+}

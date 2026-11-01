@@ -1,3 +1,4 @@
+#include "common.h"
 #include <csignal>
 #include <filesystem>
 #include <iostream>
@@ -6,6 +7,21 @@
 #include <arpa/inet.h>
 
 static std::filesystem::path spool;
+
+static void serve_client(const int fd) {
+    LineReader in(fd);
+    std::string cmd;
+    while (in.readLine(cmd)) {
+        bool ok = true;
+        if (cmd == "SEND") { std::cout << "SEND" << std::endl; }
+        else if (cmd == "LIST") { std::cout << "LIST" << std::endl; }
+        else if (cmd == "READ") { std::cout << "READ" << std::endl; }
+        else if (cmd == "DEL") { std::cout << "DEL" << std::endl; }
+        else if (cmd == "QUIT") { std::cout << "QUIT" << std::endl; return; }
+        else { std::cerr << "Unknown command: " << cmd << std::endl; ok = sendAll(fd, "ERR\n"); }
+        if (!ok) { std::cerr << "Failed to send" << std::endl; return; }
+    }
+}
 
 int main(const int argc, const char **argv) {
     if (argc != 3) {
@@ -45,7 +61,7 @@ int main(const int argc, const char **argv) {
             break;
         }
         std::cout << "Client connected:" << inet_ntoa(client_address.sin_addr) << std::endl;
-        // TODO actual request handling
+        serve_client(fd);
         close(fd);
         std::cout << "Client disconnected" << std::endl;
     }
