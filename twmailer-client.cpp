@@ -42,8 +42,41 @@ int main(int argc, char* argv[])
         perror("connect");
         return 1;
     }
-    LineReader in(fd);
-    //TODO: main loop for handeling the requests and communicating with the server. maybe a couple helper functions
+    LineReader in(fd); //this reads the server replies from the socket.
+    speak "Connected successfully." end;
+    speak "Possible Commands: SEND, LIST, READ, DEL, QUIT (q)" end;
+
+    std::string cmd;
+    std::string field1;
+    std::string field2;
+    std::string field3;
+    std::string line;
+    std::string msg;
+    while (askinput("", cmd))
+    {
+        if (cmd == "SEND")
+        {
+            //do sending stuff
+        }else if (cmd =="LIST")
+        {
+            //do listing stuff
+        }else if (cmd =="READ")
+        {
+            //do reading stuff
+        }else if (cmd =="DEL")
+        {
+            //do deleting stuff
+        }else if (cmd == "QUIT" || cmd == "q")
+        {
+            //do quitting stuff
+        }else
+        {
+            speak "Something went wrong. Maybe your command does not exist?" end;
+        }
+        //TODO: implement askinput function, fill the massive if else if thing.
+
+    }
+
 
 
 }
