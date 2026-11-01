@@ -7,11 +7,32 @@
 #define  speak std::cout<<
 #define error std::cerr <<
 #define clear <<std::flush
+#define green "\033[1;32m"
+#define red "\033[1;31m"
+#define resetc  "\033[0m"
+
+
 
 bool askinput(const char* promt, std::string &out)
 {
     speak promt clear;
     return static_cast<bool>(std::getline(std::cin, out)); //read stuff is written directly into out, return is true if the function read a line.
+}
+
+static void printmessages(LineReader &in)
+{
+    std::string line;
+    in.readLine(line);
+    speak green << "Sender: " << resetc << line << "\n";
+    in.readLine(line);
+    speak green << "Reciever: " << resetc << line << "\n";
+    in.readLine(line);
+    speak green << "Subject: " << resetc << line << "\n";
+    //this works because i know exactly what the first three lines of the server answer are going to be.
+    while (in.readLine(line) && line != ".")
+    {
+        speak line << "\n";
+    }
 }
 
 int main(int argc, char* argv[])
@@ -79,7 +100,7 @@ int main(int argc, char* argv[])
             if (!sendAll(fd, msg) || !in.readLine(line))
             //this sends the whole request and reads the server's reply. if it fails the connection failed.
             {
-                error "something went wrong, check connection to server.\n";
+                error "Something went wrong, check connection to server.\n";
                 break;
             }
             speak "Message sent." << "\n";
@@ -92,7 +113,7 @@ int main(int argc, char* argv[])
             }
             if (!sendAll(fd, "LIST\n" + field1 + "\n")|| !in.readLine(line))
             {
-                error "Connection lost\n";
+                error "Something went wrong, check connection to server.\n";
                 break;
             }
             speak line << " messages\n";
@@ -103,7 +124,19 @@ int main(int argc, char* argv[])
             }
         }else if (cmd =="READ")
         {
-            //do reading stuff
+            if (!askinput("Username: ", field1)|| !askinput("Message id: ", field2))
+            {
+                break;
+            }
+            if (!sendAll(fd, "READ\n"+field1+"\n"+field2+"\n") || !in.readLine(line))
+            {
+                error "Something went wrong, check connection to server.\n";
+                break;
+            }
+            if (line=="OK")
+            {
+                printmessages(in);
+            }
         }else if (cmd =="DEL")
         {
             //do deleting stuff
