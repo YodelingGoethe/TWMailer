@@ -38,3 +38,14 @@ public:
         }
     }
 };
+
+// send() may write only part of the data, so this helper loops until everything is written
+inline bool sendAll(const int fd, const std::string &line) {
+    size_t sent = 0;
+    while (sent < line.size()) {
+        const ssize_t n = send(fd, line.data() + sent, line.size() - sent, 0);
+        if (n <= 0) return false;
+        sent += static_cast<size_t>(n);
+    }
+    return true;
+}
