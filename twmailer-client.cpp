@@ -5,11 +5,10 @@
 #include "common.h"
 
 #define  speak std::cout<<
-#define end <<std::endl
 #define error std::cerr <<
 #define clear <<std::flush
 
-bool askinput(char* promt, std::string &out)
+bool askinput(const char* promt, std::string &out)
 {
     speak promt clear;
     return static_cast<bool>(std::getline(std::cin, out)); //read stuff is written directly into out, return is true if the function read a line.
@@ -19,7 +18,7 @@ int main(int argc, char* argv[])
 {
     if (argc != 3)
     {
-        speak "This ain't how it works... Usage: " << argv[0] << " <ip> <port>" end;
+        speak "This ain't how it works... Usage: " << argv[0] << " <ip> <port>\n";
         //argv[0] is always the program name, so this way we can change it later without rewrites.
         return 1;
     }
@@ -34,7 +33,7 @@ int main(int argc, char* argv[])
     //inet_pton from arpa/inet.h parses the ip adress (xxx.xxx.xxx.xxx) with the dots
     //into the ip field in the sockaddr_in struct
     {
-        error "invalid ip or port. check your inputs and try again." end;
+        error "invalid ip or port. check your inputs and try again.\n";
         return 1;
     }
     int fd = socket(AF_INET, SOCK_STREAM, 0); //SOCK_STREAM is TCP, protocol 0 means take the default
@@ -50,8 +49,8 @@ int main(int argc, char* argv[])
         return 1;
     }
     LineReader in(fd); //this reads the server replies from the socket.
-    speak "Connected successfully." end;
-    speak "Possible Commands: SEND, LIST, READ, DEL, QUIT (q)" end;
+    speak "Connected successfully.\n";
+    speak "Possible Commands: SEND, LIST, READ, DEL, QUIT (q)\n";
 
     std::string cmd;
     std::string field1;
@@ -63,10 +62,45 @@ int main(int argc, char* argv[])
     {
         if (cmd == "SEND")
         {
-            //do sending stuff
+            if (!askinput("Sender: ", field1) || !askinput("Reciever: ", field2) || !askinput("Subject (max. 80 chars): ", field3))
+            {
+                break;
+            }
+            msg = "SEND\n" + field1 + "\n" + field2 + "\n" + field3 + "\n"; //looks kinda ugly but task pdf wants fields seperated by line.
+            speak "Message (end with single line containing .\".\"): ";
+            while (std::getline(std::cin, line))
+            {
+                msg+=line+"\n";
+                if (line==".")
+                {
+                    break;
+                }
+            }
+            if (!sendAll(fd, msg) || !in.readLine(line))
+            //this sends the whole request and reads the server's reply. if it fails the connection failed.
+            {
+                error "something went wrong, check connection to server.\n";
+                break;
+            }
+            speak "Message sent." << "\n";
+
         }else if (cmd =="LIST")
         {
-            //do listing stuff
+            if (!askinput("Username: ", field1))
+            {
+                break;
+            }
+            if (!sendAll(fd, "LIST\n" + field1 + "\n")|| !in.readLine(line))
+            {
+                error "Connection lost\n";
+                break;
+            }
+            speak line << " messages\n";
+            int n = std::atoi(line.c_str());
+            for (int i = 1; i<=n && in.readLine(line); i++)
+            {
+                speak i << ": " << line << "\n";
+            }
         }else if (cmd =="READ")
         {
             //do reading stuff
@@ -78,9 +112,9 @@ int main(int argc, char* argv[])
             //do quitting stuff
         }else
         {
-            speak "Something went wrong. Maybe your command does not exist?" end;
+            speak "Something went wrong. Maybe your command does not exist?\n";
         }
-        //TODO: fill the massive if else if thing.
+
 
     }
 
