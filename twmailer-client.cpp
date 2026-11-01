@@ -159,6 +159,7 @@ int main(int argc, char* argv[])
             }
         }else if (cmd == "QUIT" || cmd == "q")
         {
+            speak green "Quitting...\n" resetc;
             sendAll(fd, "QUIT\n");
             break;
         }else
