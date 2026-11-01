@@ -1,19 +1,67 @@
 #include "common.h"
 #include <csignal>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <ostream>
+#include <ranges>
+#include <vector>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 static std::filesystem::path spool;
+
+static bool validate_username(const std::string &username) {
+    if (username.empty() || username.size() > 8) return false;
+    return std::all_of(username.begin(), username.end(), [](const char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z');
+    });
+}
+
+static std::vector<std::filesystem::path> get_messages(const std::string &username) {
+    std::vector<std::pair<long, std::filesystem::path>> unsorted_messages;
+    for (std::error_code ec; const auto &entry : std::filesystem::directory_iterator(spool/username, ec)) {
+        if (entry.path().extension() == ".msg") {
+            unsorted_messages.emplace_back(strtol(entry.path().stem().string().c_str(), nullptr, 10), entry.path());
+        }
+    }
+    std::sort(unsorted_messages.begin(), unsorted_messages.end());
+    std::vector<std::filesystem::path> sorted_messages;
+    for (const auto &message: unsorted_messages | std::views::values) sorted_messages.push_back(message);
+    return sorted_messages;
+}
+
+static bool handleSend(LineReader &in, const int fd) {
+    std::string sender, receiver, subject, line, body;
+    if (!in.readLine(sender) || in.readLine(receiver) || in.readLine(subject)) return false;
+    while (true) {
+        if (!in.readLine(line)) return false;
+        if (line == ".") break;
+        body += line + "\n";
+    }
+    if (!validate_username(sender) || !validate_username(receiver) || subject.size() > 80) {
+        std::cerr << "SEND rejected: Invalid sender/receiver/subject" << std::endl;
+        return sendAll(fd, "ERR\n");
+    }
+    std::error_code ec;
+    std::filesystem::create_directories(spool/receiver , ec);
+    const auto messages = get_messages(receiver);
+    long next = messages.empty() ? 1 : strtol(messages.back().stem().string().c_str(), nullptr, 10) + 1;
+    std::ofstream out(spool/receiver/(std::to_string(next)+".msg"));
+    out << sender << "\n" << receiver << "\n" << subject << "\n" << body << std::flush;
+    if (!out) {
+        std::cerr << "Failed to write to message file" << std::endl;
+        return sendAll(fd, "ERR\n");
+    }
+    return sendAll(fd, "OK\n");
+}
 
 static void serve_client(const int fd) {
     LineReader in(fd);
     std::string cmd;
     while (in.readLine(cmd)) {
         bool ok = true;
-        if (cmd == "SEND") { std::cout << "SEND" << std::endl; }
+        if (cmd == "SEND") { std::cout << "SEND" << std::endl; ok = handleSend(in, fd); }
         else if (cmd == "LIST") { std::cout << "LIST" << std::endl; }
         else if (cmd == "READ") { std::cout << "READ" << std::endl; }
         else if (cmd == "DEL") { std::cout << "DEL" << std::endl; }
