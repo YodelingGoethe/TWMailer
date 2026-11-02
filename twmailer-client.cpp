@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
         //argv[0] is always the program name, so this way we can change it later without rewrites.
         return 1;
     }
-    int port = atoi(argv[2]); //returned 0 bei inkompatiblem input, das wird beim range check rausgefiltert.
+    int port = atoi(argv[2]); //returnes 0 for incompatible input, this will be filtered out in the range check later.
     sockaddr_in ipadress{}; //{} zero initializes the struct.
     ipadress.sin_family = AF_INET; //AF_INET has to be used for TCP/UDP connections.
     ipadress.sin_port = htons(static_cast<uint16_t>(port));
